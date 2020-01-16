@@ -2,9 +2,18 @@ pub mod control_table;
 
 use Interface;
 use Servo;
-use std::cmp::*;
 
 protocol1_servo!(AX12, ::dynamixel::ax12::control_table::WriteRegister, ::dynamixel::ax12::control_table::ReadRegister, 12);
+
+fn constrain(value: u16, min: u16, max: u16) -> u16 {
+    if value < min {
+        min
+    } else if value > max {
+        max
+    } else {
+        value
+    }
+}
 
 impl<I: Interface> Servo<I> for AX12<I> {
     fn set_enable_torque(&mut self, interface: &mut I, enable_torque: bool) -> Result<(), ::Error> {
@@ -13,7 +22,7 @@ impl<I: Interface> Servo<I> for AX12<I> {
     
     fn set_position(&mut self, interface: &mut I, angle: f32) -> Result<(), ::Error> {
         let goal_position = ((angle*3.41) as i32) as u16;
-        let goal_limited = max(0, min(1023, goal_position));
+        let goal_limited = constrain(goal_position, 0, 1023);
         let a = self.write_data(interface, control_table::GoalPosition::new(goal_limited))?;
         Ok(a)
     }
