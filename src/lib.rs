@@ -128,7 +128,7 @@ impl From<BaudRate> for u32 {
             BaudRate::Baud3000000 => 3_000_000,
             BaudRate::Baud4000000 => 4_000_000,
             BaudRate::Baud4500000 => 4_500_000,
-            BaudRate::Baud10500000 => 10_500_000,       
+            BaudRate::Baud10500000 => 10_500_000,
         }
     }
 }
@@ -215,10 +215,10 @@ pub fn enumerate<I: ::Interface>(interface: &mut I) -> Result<Vec<ServoInfo>, Co
     let mut servos = Vec::new();
 
     let servos_protocol1 = protocol1::enumerate(interface)?;
-    let servos_protocol2 = protocol2::enumerate(interface)?;
+    // let servos_protocol2 = protocol2::enumerate(interface)?;
 
     servos.append(&mut servos_protocol1.into_iter().map(|x| ServoInfo::Protocol1(x)).collect());
-    servos.append(&mut servos_protocol2.into_iter().map(|x| ServoInfo::Protocol2(x)).collect());
+    // servos.append(&mut servos_protocol2.into_iter().map(|x| ServoInfo::Protocol2(x)).collect());
 
     Ok(servos)
 }
@@ -228,7 +228,7 @@ pub fn enumerate<I: ::Interface>(interface: &mut I) -> Result<Vec<ServoInfo>, Co
 /// Only offers basic functionality. If you need more functionality use the connect method of the correct servo type instead.
 /// This functions returns a Boxed trait and this requires the `std` feature.
 #[cfg(feature="std")]
-pub fn connect<I: Interface + 'static>(interface: &mut I, info: ServoInfo) -> Result<Box<Servo<I>>, CommunicationError> {
+pub fn connect<I: Interface + 'static>(interface: &mut I, info: ServoInfo) -> Result<Box<dyn Servo<I>>, CommunicationError> {
     match info {
         ServoInfo::Protocol1(si) => protocol1::connect(interface, si),
         ServoInfo::Protocol2(si) => protocol2::connect(interface, si),

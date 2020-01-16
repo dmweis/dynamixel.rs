@@ -93,7 +93,7 @@ pub fn enumerate<I: ::Interface>(interface: &mut I) -> Result<Vec<ServoInfo>, Co
 ///
 /// Only offers basic functionality. If you need more functionality use the connect method of the correct servo type instead.
 #[cfg(feature="std")]
-pub fn connect<I: Interface + 'static>(_interface: &mut I, info: ServoInfo) -> Result<Box<::Servo<I>>, CommunicationError>{
+pub fn connect<I: Interface + 'static>(_interface: &mut I, info: ServoInfo) -> Result<Box<dyn (::Servo<I>)>, CommunicationError>{
     match info.model_number {
         ::pro::M4210S260R::<I>::MODEL_NUMBER => Ok(Box::new(::pro::M4210S260R::<I>::new(info.id, info.baud_rate))),
         _ => unimplemented!(),

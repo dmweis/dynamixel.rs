@@ -18,7 +18,7 @@ mod checksum;
 pub fn enumerate<I: ::Interface>(interface: &mut I) -> Result<Vec<ServoInfo>, CommunicationError> {
     let mut servos = Vec::new();
 
-    for b in BaudRate::variants() {
+    for b in vec![&BaudRate::Baud1000000] {
 
         if let Err(_) = interface.set_baud_rate(*b) {
             warn!(target: "protocol1", "not able to enumerate devices on baudrate: {}", u32::from(*b));
@@ -75,9 +75,10 @@ pub fn enumerate<I: ::Interface>(interface: &mut I) -> Result<Vec<ServoInfo>, Co
 /// Only offers basic functionality. If you need more functionality use the connect method of the correct servo type instead.
 /// This functions returns a Boxed trait and this requires the `std` feature.
 #[cfg(feature="std")]
-pub(crate) fn connect<I: ::Interface + 'static>(_interface: &mut I, info: ServoInfo) -> Result<Box<::Servo<I>>, CommunicationError>{
+pub(crate) fn connect<I: ::Interface + 'static>(_interface: &mut I, info: ServoInfo) -> Result<Box<dyn (::Servo<I>)>, CommunicationError>{
     match info.model_number {
         ::dynamixel::mx28::MX28::<I>::MODEL_NUMBER => Ok(Box::new(::dynamixel::mx28::MX28::<I>::new(info.id, info.baud_rate))),
+        ::dynamixel::ax12::AX12::<I>::MODEL_NUMBER => Ok(Box::new(::dynamixel::ax12::AX12::<I>::new(info.id, info.baud_rate))),
         _ => unimplemented!(),
     }
 }
@@ -130,7 +131,6 @@ macro_rules! protocol1_servo {
             pub fn write_data<W: $write>(&mut self, interface: &mut I, register: W) -> Result<(), ::protocol1::Error> {
                 interface.set_baud_rate(self.baudrate)?;
                 interface.flush();
-                
                 let write = ::protocol1::instruction::WriteData::new(::protocol1::PacketID::from(self.id), register);
                 interface.write(&::protocol1::Instruction::serialize(&write)[0..<::protocol1::instruction::WriteData<W> as ::protocol1::Instruction>::LENGTH as usize + 4])?;
                 let mut received_data = [0u8; 11];
