@@ -11,3 +11,5 @@ Cargo.lock
 # Backup files for emacs
 **/*~
 
+# vscode config files
+.vscode
