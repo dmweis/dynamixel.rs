@@ -4,9 +4,9 @@ use serialport;
 use std::ops::DerefMut;
 
 use {
-    CommunicationError,
-    Interface,
-    BaudRate,
+    crate::CommunicationError,
+    crate::Interface,
+    crate::BaudRate,
 };
 
 impl From<serialport::Error> for CommunicationError {

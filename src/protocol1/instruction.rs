@@ -1,5 +1,5 @@
-use protocol1::*;
-use protocol1::ServoID;
+use crate::protocol1::*;
+use crate::protocol1::ServoID;
 
 pub(crate) struct Ping {
     pub id: PacketID,
@@ -81,14 +81,14 @@ impl Status for WriteDataResponse {
 
 pub(crate) struct ReadData<T: ReadRegister> {
     pub id: PacketID,
-    reg: ::lib::marker::PhantomData<T>,
+    reg: crate::lib::marker::PhantomData<T>,
 }
 
 impl<T: ReadRegister> ReadData<T> {
     pub(crate) fn new(id: PacketID) -> Self {
         ReadData {
             id: id,
-            reg: ::lib::marker::PhantomData{},
+            reg: crate::lib::marker::PhantomData{},
         }
     }
 }
@@ -130,8 +130,8 @@ mod tests {
     // Using the same test case that can be found at:
     // http://support.robotis.com/en/product/actuator/dynamixel/communication/dxl_instruction.htm
     
-    use protocol1::*;
-    use protocol1::instruction::*;
+    use crate::protocol1::*;
+    use crate::protocol1::instruction::*;
 
     #[test]
     fn test_ping() {
@@ -147,13 +147,13 @@ mod tests {
     
     #[test]
     fn test_write() {
-        assert_eq!(WriteData::new(PacketID::unicast(1), ::dynamixel::mx28::control_table::GoalPosition::new(0x123)).serialize(), [0xff, 0xff, 0x01, 0x05, 0x03, 30, 0x23, 0x01, 180, 0x00, 0x00]);
-        assert_eq!(WriteData::new(PacketID::broadcast(), ::dynamixel::mx28::control_table::GoalPosition::new(0x123)).serialize(), [0xff, 0xff, 0xfe, 0x05, 0x03, 30, 0x23, 0x01, 183, 0x00, 0x00]);
+        assert_eq!(WriteData::new(PacketID::unicast(1), crate::dynamixel::ax12::control_table::GoalPosition::new(0x123)).serialize(), [0xff, 0xff, 0x01, 0x05, 0x03, 30, 0x23, 0x01, 180, 0x00, 0x00]);
+        assert_eq!(WriteData::new(PacketID::broadcast(), crate::dynamixel::ax12::control_table::GoalPosition::new(0x123)).serialize(), [0xff, 0xff, 0xfe, 0x05, 0x03, 30, 0x23, 0x01, 183, 0x00, 0x00]);
     }
 
     #[test]
     fn test_read() {
-        assert_eq!(ReadData::<::dynamixel::mx28::control_table::PresentPosition>::new(PacketID::unicast(1)).serialize(), [0xff, 0xff, 0x01, 0x04, 0x02, 36, 0x2, 210]);
-        assert_eq!(ReadData::<::dynamixel::mx28::control_table::PresentPosition>::new(PacketID::broadcast()).serialize(), [0xff, 0xff, 0xfe, 0x04, 0x02, 36, 0x2, 213]);
+        assert_eq!(ReadData::<crate::dynamixel::ax12::control_table::PresentPosition>::new(PacketID::unicast(1)).serialize(), [0xff, 0xff, 0x01, 0x04, 0x02, 36, 0x2, 210]);
+        assert_eq!(ReadData::<crate::dynamixel::ax12::control_table::PresentPosition>::new(PacketID::broadcast()).serialize(), [0xff, 0xff, 0xfe, 0x04, 0x02, 36, 0x2, 213]);
     }
 }

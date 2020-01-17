@@ -9,15 +9,17 @@ mod control_table;
 mod crc;
 mod bit_stuffer;
 
-use Interface;
-use BaudRate;
-use CommunicationError;
+use log::warn;
+
+use crate::Interface;
+use crate::CommunicationError;
+use crate::protocol2;
 
 use bit_field::BitField;
 use self::bit_stuffer::BitStuffer;
 
 /// Write the instruction on the interface
-pub(crate) fn write_instruction<I: ::Interface, T: Instruction>(interface: &mut I, instruction: T) -> Result<(), CommunicationError> {
+pub(crate) fn write_instruction<I: Interface, T: Instruction>(interface: &mut I, instruction: T) -> Result<(), CommunicationError> {
     for b in instruction.serialize() {
         interface.write(&[b])?
     }
@@ -27,7 +29,7 @@ pub(crate) fn write_instruction<I: ::Interface, T: Instruction>(interface: &mut 
 /// Read a status from the interface
 ///
 /// If no instructions have been sent, there will not be any status to read
-pub(crate) fn read_status<I: ::Interface, T: Status>(interface: &mut I) -> Result<T, Error> {
+pub(crate) fn read_status<I: Interface, T: Status>(interface: &mut I) -> Result<T, Error> {
     let mut header = [0u8; 9];
     interface.read(&mut header)?;
     
@@ -55,17 +57,17 @@ pub(crate) fn read_status<I: ::Interface, T: Status>(interface: &mut I) -> Resul
 ///
 /// This functions returns a Vec and thus requires the `std` feature.
 #[cfg(feature="std")]
-pub fn enumerate<I: ::Interface>(interface: &mut I) -> Result<Vec<ServoInfo>, CommunicationError> {
+pub fn enumerate<I: Interface>(interface: &mut I) -> Result<Vec<ServoInfo>, CommunicationError> {
     let mut servos = Vec::new();
 
-    for b in BaudRate::variants() {
+    for b in crate::BaudRate::variants() {
 
         if let Err(_) = interface.set_baud_rate(*b) {
             warn!(target: "protocol2", "not able to enumerate devices on baudrate: {}", u32::from(*b));
         }
 
         interface.flush();
-        let ping = ::protocol2::instruction::Ping::new(::protocol2::PacketID::Broadcast);
+        let ping = crate::protocol2::instruction::Ping::new(PacketID::Broadcast);
         write_instruction(interface, ping)?;
 
         loop {
@@ -93,43 +95,43 @@ pub fn enumerate<I: ::Interface>(interface: &mut I) -> Result<Vec<ServoInfo>, Co
 ///
 /// Only offers basic functionality. If you need more functionality use the connect method of the correct servo type instead.
 #[cfg(feature="std")]
-pub fn connect<I: Interface + 'static>(_interface: &mut I, info: ServoInfo) -> Result<Box<dyn (::Servo<I>)>, CommunicationError>{
+pub fn connect<I: Interface + 'static>(_interface: &mut I, info: ServoInfo) -> Result<Box<dyn (crate::Servo<I>)>, CommunicationError>{
     match info.model_number {
-        ::pro::M4210S260R::<I>::MODEL_NUMBER => Ok(Box::new(::pro::M4210S260R::<I>::new(info.id, info.baud_rate))),
+        crate::pro::M4210S260R::<I>::MODEL_NUMBER => Ok(Box::new(crate::pro::M4210S260R::<I>::new(info.id, info.baud_rate))),
         _ => unimplemented!(),
     }
 }
 
 macro_rules! protocol2_servo {
     ($name:ident, $write:path, $read:path, $model_number:expr) => {
-        pub struct $name<I: ::Interface> {
-            id: ::protocol2::ServoID,
-            baudrate: ::BaudRate,
-            interface: ::lib::marker::PhantomData<I>,
+        pub struct $name<I: Interface> {
+            id: crate::protocol2::ServoID,
+            baudrate: crate::BaudRate,
+            interface: crate::lib::marker::PhantomData<I>,
         }
 
-        impl<I: ::Interface> $name<I> {
+        impl<I: Interface> $name<I> {
             pub const MODEL_NUMBER: u16 = $model_number;
 
             /// Create a new servo without `ping`ing or taking any other measure to make sure it exists.
-            pub fn new(id: ::protocol2::ServoID, baudrate: ::BaudRate) -> Self {
+            pub fn new(id: crate::protocol2::ServoID, baudrate: $crate::BaudRate) -> Self {
                 $name{
                     id: id,
                     baudrate: baudrate,
-                    interface: ::lib::marker::PhantomData{},
+                    interface: crate::lib::marker::PhantomData{},
                 }
             }
             
             /// Ping the servo, returning `Ok(ServoInfo)` if it exists.
-            pub fn ping(&mut self, interface: &mut I) -> Result<::protocol2::ServoInfo, ::protocol2::Error> {
+            pub fn ping(&mut self, interface: &mut I) -> Result<crate::protocol2::ServoInfo, crate::protocol2::Error> {
                 interface.set_baud_rate(self.baudrate)?;
                 interface.flush();
                 
-                let ping = ::protocol2::instruction::Ping::new(::protocol2::PacketID::from(self.id));
-                ::protocol2::write_instruction(interface, ping)?;
-                let pong = ::protocol2::read_status::<I, ::protocol2::instruction::Pong>(interface)?;
+                let ping = crate::protocol2::instruction::Ping::new(crate::protocol2::PacketID::from(self.id));
+                crate::protocol2::write_instruction(interface, ping)?;
+                let pong = crate::protocol2::read_status::<I, crate::protocol2::instruction::Pong>(interface)?;
                 Ok(
-                    ::protocol2::ServoInfo{
+                    crate::protocol2::ServoInfo{
                         baud_rate: self.baudrate,
                         model_number: pong.model_number,
                         fw_version: pong.fw_version,
@@ -139,22 +141,22 @@ macro_rules! protocol2_servo {
             }
 
             /// Write the given data `register` to the servo.
-            pub fn write<W: $write>(&mut self, interface: &mut I, register: W) -> Result<(), ::protocol2::Error> {
+            pub fn write<W: $write>(&mut self, interface: &mut I, register: W) -> Result<(), crate::protocol2::Error> {
                 interface.set_baud_rate(self.baudrate)?;
-                let write = ::protocol2::instruction::Write::new(::protocol2::PacketID::from(self.id), register);
-                ::protocol2::write_instruction(interface, write)?;
-                ::protocol2::read_status::<I, ::protocol2::instruction::WriteResponse>(interface)?;
+                let write = crate::protocol2::instruction::Write::new(crate::protocol2::PacketID::from(self.id), register);
+                crate::protocol2::write_instruction(interface, write)?;
+                crate::protocol2::read_status::<I, crate::protocol2::instruction::WriteResponse>(interface)?;
                 Ok(())
             }
 
             /// Read data from a register
-            pub fn read<R: $read>(&mut self, interface: &mut I) -> Result<R, ::protocol2::Error> {
+            pub fn read<R: $read>(&mut self, interface: &mut I) -> Result<R, crate::protocol2::Error> {
                 interface.set_baud_rate(self.baudrate)?;
                 interface.flush();
                 
-                let read = ::protocol2::instruction::Read::<R>::new(::protocol2::PacketID::from(self.id));
-                ::protocol2::write_instruction(interface, read)?;
-                Ok(::protocol2::read_status::<I, ::protocol2::instruction::ReadResponse<R>>(interface)?.value)
+                let read = crate::protocol2::instruction::Read::<R>::new(crate::protocol2::PacketID::from(self.id));
+                crate::protocol2::write_instruction(interface, read)?;
+                Ok(crate::protocol2::read_status::<I, crate::protocol2::instruction::ReadResponse<R>>(interface)?.value)
             }
         }
     };
@@ -166,7 +168,7 @@ pub trait Register {
 }
     
 pub trait ReadRegister: Register {
-    fn deserialize(&[u8]) -> Self;
+    fn deserialize(data: &[u8]) -> Self;
 }
 
 pub trait WriteRegister: Register {
@@ -221,7 +223,7 @@ pub(crate) struct Serializer<'a, T: Instruction + 'a> {
     instruction: &'a T,
 }
 
-impl<'a, T: Instruction + 'a> ::lib::iter::Iterator for Serializer<'a, T> {
+impl<'a, T: Instruction + 'a> crate::lib::iter::Iterator for Serializer<'a, T> {
     type Item = u8;
     
     fn next(&mut self) -> Option<u8> {
@@ -269,13 +271,13 @@ pub(crate) enum DeserializationStatus {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) struct Deserializer<T: Status> {
-    phantom: ::lib::marker::PhantomData<T>,
+    phantom: crate::lib::marker::PhantomData<T>,
 }
 
 impl<T: Status> Deserializer<T> {
     fn new() -> Self {
         Deserializer {
-            phantom: ::lib::marker::PhantomData{},
+            phantom: crate::lib::marker::PhantomData{},
         }
     }
     
@@ -306,7 +308,7 @@ impl<T: Status> Deserializer<T> {
             alert: data[8].get_bit(7),
             processing_error: ProcessingError::decode(data[8].get_bits(0..7))?,
             parameters: [0u8; 6],
-            phantom: ::lib::marker::PhantomData{},
+            phantom: crate::lib::marker::PhantomData{},
         })
     }
 }
@@ -322,7 +324,7 @@ pub(crate) struct BodyDeserializer<T: Status> {
     alert: bool,
     processing_error: Option<ProcessingError>,
     parameters: [u8; 6],
-    phantom: ::lib::marker::PhantomData<T>,
+    phantom: crate::lib::marker::PhantomData<T>,
 }
 
 impl<T: Status> BodyDeserializer<T> {
@@ -381,15 +383,15 @@ impl<T: Status> BodyDeserializer<T> {
 /// All information needed to connect to a protocol 2 servo
 #[derive(Debug, Clone)]
 pub struct ServoInfo {
-    pub baud_rate: ::BaudRate,
+    pub baud_rate: crate::BaudRate,
     pub model_number: u16,
     pub fw_version: u8,
     pub id: ServoID,
 }
 
 
-impl From<::CommunicationError> for Error {
-    fn from(e: ::CommunicationError) -> Error {
+impl From<crate::CommunicationError> for Error {
+    fn from(e: crate::CommunicationError) -> Error {
         Error::Communication(e)
     }
 }
@@ -397,18 +399,18 @@ impl From<::CommunicationError> for Error {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Error {
     Unfinished,
-    Communication(::CommunicationError),
+    Communication(CommunicationError),
     Format(FormatError),
     Processing(ProcessingError),
 }
 
-impl From<::protocol2::Error> for ::Error {
-    fn from(e: ::protocol2::Error) -> ::Error {
+impl From<protocol2::Error> for crate::Error {
+    fn from(e: crate::protocol2::Error) -> crate::Error {
         match e {
-            ::protocol2::Error::Unfinished => ::Error::Unfinished,
-            ::protocol2::Error::Communication(ce) => ::Error::Communication(ce),
-            ::protocol2::Error::Format(_) => ::Error::Format,
-            ::protocol2::Error::Processing(_) => ::Error::Processing,
+            protocol2::Error::Unfinished => crate::Error::Unfinished,
+            protocol2::Error::Communication(ce) => crate::Error::Communication(ce),
+            protocol2::Error::Format(_) => crate::Error::Format,
+            protocol2::Error::Processing(_) => crate::Error::Processing,
         }
     }
 }

@@ -1,6 +1,6 @@
-pub trait Register: ::protocol2::Register {}
-pub trait ReadRegister: ::protocol2::ReadRegister {}
-pub trait WriteRegister: ::protocol2::WriteRegister {}
+pub trait Register: crate::protocol2::Register {}
+pub trait ReadRegister: crate::protocol2::ReadRegister {}
+pub trait WriteRegister: crate::protocol2::WriteRegister {}
 
 rw_reg2!(OperatingMode, u8, 11);
 rw_reg2!(TorqueEnable, bool, 562);

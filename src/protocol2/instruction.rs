@@ -1,4 +1,5 @@
-use protocol2::*;
+use crate::protocol2::*;
+// use crate::dynamixel::mx28::control_table;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub(crate) struct Ping {
@@ -47,12 +48,12 @@ impl Status for Pong {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub(crate) struct Read<T: ReadRegister> {
     id: PacketID,
-    phantom: ::lib::marker::PhantomData<T>,
+    phantom: crate::lib::marker::PhantomData<T>,
 }
 
 impl<T: ReadRegister> Read<T> {
     pub fn new(id: PacketID) -> Self {
-        Read{id: id, phantom: ::lib::marker::PhantomData}
+        Read{id: id, phantom: crate::lib::marker::PhantomData}
     }
 }
 
@@ -145,8 +146,9 @@ mod tests {
     // Using the same test case that can be found at:
     // http://support.robotis.com/en/product/actuator/dynamixel_pro/communication/instruction_status_packet.htm
     
-    use protocol2::*;
-    use protocol2::instruction::*;
+    use crate::protocol2::*;
+    use crate::protocol2::instruction::*;
+    use crate::pro;
 
     #[test]
     fn test_ping() {
@@ -211,7 +213,7 @@ mod tests {
     #[test]
     fn test_write() {
         let mut array = [0u8; 16];
-        let write = Write::new(PacketID::unicast(1), ::pro::control_table::GoalPosition::new(0xabcd));
+        let write = Write::new(PacketID::unicast(1), crate::pro::control_table::GoalPosition::new(0xabcd));
         for (i, b) in write.serialize().enumerate() {
             array[i] = b;
         }
@@ -222,7 +224,7 @@ mod tests {
 
         // Test write that needs stuffing
         let mut array = [0u8; 17];
-        let write = Write::new(PacketID::unicast(1), ::pro::control_table::GoalPosition::new(0xfdffff));
+        let write = Write::new(PacketID::unicast(1), crate::pro::control_table::GoalPosition::new(0xfdffff));
         for (i, b) in write.serialize().enumerate() {
             array[i] = b;
         }
@@ -273,7 +275,7 @@ mod tests {
     #[test]
     fn test_read() {
         let mut array = [0u8; 14];
-        let read = Read::<::pro::control_table::PresentPosition>::new(PacketID::unicast(1));
+        let read = Read::<crate::pro::control_table::PresentPosition>::new(PacketID::unicast(1));
         for (i, b) in read.serialize().enumerate() {
             array[i] = b;
         }
@@ -285,7 +287,7 @@ mod tests {
 
     #[test]
     fn test_read_response_slice() {
-        let mut deserializer = Deserializer::<ReadResponse<::pro::control_table::GoalPosition>>::new()
+        let mut deserializer = Deserializer::<ReadResponse<crate::pro::control_table::GoalPosition>>::new()
             .deserialize_header([0xff, 0xff, 0xfd, 0x00, 0x01, 0x08, 0x00, 0x55, 0x00])
             .unwrap();
 
@@ -293,7 +295,7 @@ mod tests {
         
         assert_eq!(deserializer.build(),
                    Ok(ReadResponse{
-                       value: ::pro::control_table::GoalPosition::new(0x000000a6),
+                       value: crate::pro::control_table::GoalPosition::new(0x000000a6),
                        id: ServoID::new(0x01),
                    })
         );
@@ -302,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_read_response_byte() {
-        let mut deserializer = Deserializer::<ReadResponse<::pro::control_table::GoalPosition>>::new()
+        let mut deserializer = Deserializer::<ReadResponse<crate::pro::control_table::GoalPosition>>::new()
             .deserialize_header([0xff, 0xff, 0xfd, 0x00, 0x01, 0x08, 0x00, 0x55, 0x00])
             .unwrap();
 
@@ -314,7 +316,7 @@ mod tests {
         
         assert_eq!(deserializer.build(),
                    Ok(ReadResponse{
-                       value: ::pro::control_table::GoalPosition::new(0x000000a6),
+                       value: crate::pro::control_table::GoalPosition::new(0x000000a6),
                        id: ServoID::new(0x01),
                    })
         );

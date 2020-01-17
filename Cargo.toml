@@ -2,6 +2,7 @@
 name = "dynamixel"
 description = "A (soon to be) full featured dynamixel servo library in rust"
 version = "0.1.1"
+edition = "2018"
 
 authors = ["Kjetil Kjeka <kjetilkjeka@gmail.com>"]
 

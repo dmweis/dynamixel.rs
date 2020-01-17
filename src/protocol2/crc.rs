@@ -63,7 +63,7 @@ impl From<CRC> for u16 {
 
 #[cfg(test)]
 mod tests {    
-    use protocol2::crc::*;
+    use crate::protocol2::crc::*;
     
     #[test]
     fn calculate_checksum_raw() {

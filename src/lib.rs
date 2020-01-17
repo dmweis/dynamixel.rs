@@ -7,10 +7,9 @@ mod lib {
     pub use core::*;
 }
 
-#[macro_use]
-extern crate log;
+use log::warn;
 
-extern crate bit_field;
+use bit_field;
 
 #[cfg(feature="serialport")]
 extern crate serialport;
@@ -32,17 +31,17 @@ mod serial_impl;
 pub trait Servo<I: Interface> {
 
     /// Enable/Disable torque on the servo.
-    fn set_enable_torque(&mut self, interface: &mut I, enable_torque: bool) -> Result<(), ::Error>;
+    fn set_enable_torque(&mut self, interface: &mut I, enable_torque: bool) -> Result<(), Error>;
 
     /// Set the goal position. Some servos will be put into "position control mode" when this method is called.
     ///
     /// value is in unit: radians
-    fn set_position(&mut self, interface: &mut I, value: f32) -> Result<(), ::Error>;
+    fn set_position(&mut self, interface: &mut I, value: f32) -> Result<(), Error>;
     
     /// Get the current position.
     ///
     /// The result is returned in unit: radians 
-    fn get_position(&mut self, interface: &mut I) -> Result<f32, ::Error>;
+    fn get_position(&mut self, interface: &mut I) -> Result<f32, Error>;
 }
 
 
@@ -202,7 +201,7 @@ impl From<std::io::Error> for CommunicationError {
 
 /// All information needed to connect to a servo
 #[derive(Debug, Clone)]
-pub enum ServoInfo {
+pub enum ServoProtocol {
     Protocol1(protocol1::ServoInfo),
     Protocol2(protocol2::ServoInfo),
 }
@@ -211,14 +210,14 @@ pub enum ServoInfo {
 ///
 /// This functions returns a Vec and thus requires the `std` feature.
 #[cfg(feature="std")]
-pub fn enumerate<I: ::Interface>(interface: &mut I) -> Result<Vec<ServoInfo>, CommunicationError> {
+pub fn enumerate<I: Interface>(interface: &mut I) -> Result<Vec<ServoProtocol>, CommunicationError> {
     let mut servos = Vec::new();
 
     let servos_protocol1 = protocol1::enumerate(interface)?;
     // let servos_protocol2 = protocol2::enumerate(interface)?;
 
-    servos.append(&mut servos_protocol1.into_iter().map(|x| ServoInfo::Protocol1(x)).collect());
-    // servos.append(&mut servos_protocol2.into_iter().map(|x| ServoInfo::Protocol2(x)).collect());
+    servos.append(&mut servos_protocol1.into_iter().map(|x| ServoProtocol::Protocol1(x)).collect());
+    // servos.append(&mut servos_protocol2.into_iter().map(|x| ServoProtocol::Protocol2(x)).collect());
 
     Ok(servos)
 }
@@ -228,10 +227,10 @@ pub fn enumerate<I: ::Interface>(interface: &mut I) -> Result<Vec<ServoInfo>, Co
 /// Only offers basic functionality. If you need more functionality use the connect method of the correct servo type instead.
 /// This functions returns a Boxed trait and this requires the `std` feature.
 #[cfg(feature="std")]
-pub fn connect<I: Interface + 'static>(interface: &mut I, info: ServoInfo) -> Result<Box<dyn Servo<I>>, CommunicationError> {
+pub fn connect<I: Interface + 'static>(interface: &mut I, info: ServoProtocol) -> Result<Box<dyn Servo<I>>, CommunicationError> {
     match info {
-        ServoInfo::Protocol1(si) => protocol1::connect(interface, si),
-        ServoInfo::Protocol2(si) => protocol2::connect(interface, si),
+        ServoProtocol::Protocol1(si) => protocol1::connect(interface, si),
+        ServoProtocol::Protocol2(si) => protocol2::connect(interface, si),
     }
 }
 
